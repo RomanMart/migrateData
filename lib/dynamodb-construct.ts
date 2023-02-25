@@ -16,8 +16,12 @@ export class DynamodbConstruct extends Construct {
     private createTemplatesTable(): ITable {
         return new Table(this, "template", {
             partitionKey: {
-                name: "id",
+                name: "PK",
                 type: AttributeType.STRING,
+            },
+            sortKey: {
+                name: "SK",
+                type: AttributeType.STRING
             },
             tableName: "template",
             removalPolicy: RemovalPolicy.DESTROY,
@@ -28,12 +32,16 @@ export class DynamodbConstruct extends Construct {
     private createNewTemplatesTable(): ITable {
         return new Table(this, 'newTemplate', {
             partitionKey: {
-                name: "id",
+                name: "PK",
                 type: AttributeType.STRING,
+            },
+            sortKey: {
+                name: "SK",
+                type: AttributeType.STRING
             },
             tableName: 'newTemplate',
             removalPolicy: RemovalPolicy.DESTROY,
-            billingMode: BillingMode.PAY_PER_REQUEST
+            billingMode: BillingMode.PAY_PER_REQUEST,
         });
     }
 }

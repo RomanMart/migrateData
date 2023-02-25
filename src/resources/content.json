@@ -1,0 +1,49 @@
+{
+    "PK": "TEMPLATE",
+    "SK": "be365ebe-e708-4c22-8e41-8e2525e05a28#CONTENT",
+    "code": "be365ebe-e708-4c22-8e41-8e2525e05a28",
+    "content": [
+     {
+      "items": [
+       {
+        "code": "d22a58ff-cd6c-411c-b0eb-21638eb00708",
+        "order": 1
+       },
+       {
+        "code": "be69f84b-75be-4346-843b-e0943a403386",
+        "order": 2
+       },
+       {
+        "code": "27c97563-e9d4-40c0-ab65-821726a34c9a",
+        "order": 3
+       }
+      ],
+      "name": "Part1",
+      "order": 1
+     },
+     {
+      "items": [
+       {
+        "code": "52889367-3fd8-4c58-be80-f161b68d71f3",
+        "order": 1
+       }
+      ],
+      "name": "Part2",
+      "order": 2
+     },
+     {
+      "items": [
+       {
+        "code": "6fed2772-f0f7-4c22-acb5-9bed5d94594f",
+        "order": 1
+       },
+       {
+        "code": "7ce8712f-ddeb-430e-bb4b-60cdb1a954ee",
+        "order": 2
+       }
+      ],
+      "name": "Part3",
+      "order": 3
+     }
+    ]
+   }

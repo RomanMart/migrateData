@@ -1,0 +1,20 @@
+export const NewTemplate = {
+    accountIDs: [],
+    code: "",
+    customProductIDs: [],
+    description: "",
+    empSeniorityID: "",
+    expectedTime: "", 
+    itemsCount: 0,
+    itemsDuration: 0,
+    locationIDs: [],
+    org2ID: "",
+    org3ID: "",
+    org4ID: "",
+    org5ID: "",
+    prerequisites: "",
+    productIDs: [],
+    roleIDs: [],
+    title: "",
+    titleHash: ""
+}

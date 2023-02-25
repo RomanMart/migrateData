@@ -1,0 +1,28 @@
+{
+    "PK": "TEMPLATE",
+    "SK": "be365ebe-e708-4c22-8e41-8e2525e05a28#DETAILS",
+    "accountIDs": [
+     "010f0569-040e-4851-bf13-5c2e21a1f9db",
+     "004b8f92-a8fd-47c1-9361-45a6878032b5",
+     "0054b97a-b917-4660-af53-4fa574e74822"
+    ],
+    "code": "be365ebe-e708-4c22-8e41-8e2525e05a28",
+    "empSeniorityID": "4f6eef0c-2479-4bcb-9ee9-adf9b3ea097f",
+    "expectedTime": "10",
+    "isEnabled": true,
+    "location": "",
+    "org2ID": "2222000004",
+    "org3ID": "3333000612",
+    "org4ID": "4444001771",
+    "org5ID": "5555002938",
+    "productIDs": [
+     "015d21cd-d448-4d02-aa1d-822ab41d8eb0",
+     "02d64b5d-c2d8-40a9-901f-548e8ea823ea"
+    ],
+    "roleIDs": [
+     "R101",
+     "R102"
+    ],
+    "seniorityLevel": "4f6eef0c-2479-4bcb-9ee9-adf9b3ea097f",
+    "title": "Temp test nazar"
+   }

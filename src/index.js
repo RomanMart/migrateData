@@ -2,7 +2,6 @@ import { PutItemCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import { ddbClient } from "./ddbClient";
 import { v4 as uuidv4 } from "uuid";
-import { NewTemplate } from "./models/newTemplate";
 
 exports.handler = async function (event) {
   console.log("request:", JSON.stringify(event, undefined, 2));
@@ -109,34 +108,32 @@ const migrateToNewTemplates = async (event) => {
   try {
     const oldTemplates = await getAllTemplates();
 
-    const newTemplates = oldTemplates.map((template) => {
-      let result;
+    console.log(`Old templates: "${JSON.stringify(oldTemplates)}"`);
+
+    let newTemplates = [];
+    oldTemplates.forEach((template) => {
       if (template.SK.includes("#DETAILS")) {
-        result = mapDetails(template);
-        console.log(result);
+        console.log(`Start mapping DETAILS template with code "${template.code}"`);
+        const mappedDetails = mapDetails(template);
+
+        console.log(`Sucessfully mapped DETAILS template. New DETAILS template: "${JSON.stringify(mappedDetails, null, "  ")}"`);
+        newTemplates.push(mappedDetails);
       } else if (template.SK.includes("#CONTENT")) {
-        result = mapContent(template);
+        console.log(`Start mapping CONTENT template with code "${template.code}"`);
+        const mappedContent = mapContent(template);
 
-        let metadata = generateMetadata(result);
+        console.log(`Sucessfully mapped CONTENT template. New CONTENT template: "${JSON.stringify(mappedContent, null, "  ")}"`);
+        newTemplates.push(mappedContent);
 
-        ddbClient.send(
-            new PutItemCommand({
-              TableName: process.env.NEW_TEMPLATES_TABLE_NAME,
-              Item: marshall(metadata || {}),
-            })
-          )
-
+        if (mappedContent) {
+            console.log(`Start generating metadata object for template with code: "${template.code}}"`);
+            const metadata = generateMetadata(mappedContent);
+            console.log(`Generated metadata for template with code: "${template.code}}" is: "${JSON.stringify(metadata)}"`);
+            newTemplates.push(metadata);
+        }
       } else {
         console.log("SK value does not match expected format");
       }
-      ddbClient.send(
-        new PutItemCommand({
-          TableName: process.env.NEW_TEMPLATES_TABLE_NAME,
-          Item: marshall(result || {}),
-        })
-      )
-      return result;
-      //   return mapToNewTemplate(template);
     });
 
     console.log(
@@ -147,140 +144,25 @@ const migrateToNewTemplates = async (event) => {
       )}"`
     );
 
-    // const putPromises = [];
-    // newTemplates.forEach((item) => {
-    //   console.log(`Start saving newTemplate: "${{ item }}" into DB`);
-    //   putPromises.push(
-    //     ddbClient.send(
-    //       new PutItemCommand({
-    //         TableName: process.env.NEW_TEMPLATES_TABLE_NAME,
-    //         Item: marshall(item || {}),
-    //       })
-    //     )
-    //   );
-    // });
+    const putPromises = [];
+    newTemplates.forEach((item) => {
+      console.log(`Start saving newTemplate: "${JSON.stringify(item)}" into DB`);
+      putPromises.push(
+        ddbClient.send(
+          new PutItemCommand({
+            TableName: process.env.NEW_TEMPLATES_TABLE_NAME,
+            Item: marshall(item || {}),
+          })
+        )
+      );
+    });
 
-    // await Promise.all(putPromises);
-    console.log("Successfully copied table");
+    await Promise.all(putPromises);
+    console.log("Successfully migrated table");
   } catch (e) {
     console.error(e);
     throw e;
   }
-};
-
-const mapToNewTemplate = (template) => {
-  console.log(`Starting migration of template: "${JSON.stringify(template)}"`);
-  let newTemplate = NewTemplate;
-
-  if (template.accountIDs !== undefined) {
-    newTemplate.accountIDs = template.accountIDs;
-  } else {
-    newTemplate.accountIDs = Array.from(new Array(3), (val) => uuidv4); // setting random string array containing UUID values
-  }
-
-  if (template.code !== undefined) {
-    newTemplate.code = template.code;
-  } else {
-    newTemplate.code = randomString(); // setting random string
-  }
-
-  if (template.customProductIDs !== undefined) {
-    newTemplate.customProductIDs = template.customProductIDs;
-  } else {
-    newTemplate.customProductIDs = randomArray(); // setting random string array containing UUID values
-  }
-
-  if (template.description !== undefined) {
-    newTemplate.description = template.description;
-  } else {
-    newTemplate.description = randomString(); // setting random string
-  }
-
-  if (template.empSeniorityID !== undefined) {
-    newTemplate.empSeniorityID = template.empSeniorityID;
-  } else {
-    newTemplate.empSeniorityID = uuidv4(); // setting random string
-  }
-
-  if (template.expectedTime !== undefined) {
-    newTemplate.expectedTime = template.expectedTime;
-  } else {
-    newTemplate.expectedTime = randomString(); // setting random string
-  }
-  if (template.itemsCount !== undefined) {
-    newTemplate.itemsCount = template.itemsCount;
-  } else {
-    newTemplate.itemsCount = Math.random(); // setting random string
-  }
-
-  if (template.itemsDuration !== undefined) {
-    newTemplate.itemsDuration = template.itemsDuration;
-  } else {
-    newTemplate.itemsDuration = Math.random(); // setting random string
-  }
-
-  if (template.location !== undefined) {
-    newTemplate.locationIDs[0] = template.location;
-  } else {
-    newTemplate.itemsDuration = Math.random(); // setting random string
-  }
-
-  if (template.org2ID !== undefined) {
-    newTemplate.org2ID = template.org2ID;
-  } else {
-    newTemplate.org2ID = randomString(); // setting random string
-  }
-
-  if (template.org3ID !== undefined) {
-    newTemplate.org3ID = template.org3ID;
-  } else {
-    newTemplate.org3ID = randomString(); // setting random string
-  }
-
-  if (template.org4ID !== undefined) {
-    newTemplate.org4ID = template.org4ID;
-  } else {
-    newTemplate.org4ID = randomString(); // setting random string
-  }
-
-  if (template.org3ID !== undefined) {
-    newTemplate.org5ID = template.org5ID;
-  } else {
-    newTemplate.org5ID = randomString(); // setting random string
-  }
-
-  if (template.prerequisites !== undefined) {
-    newTemplate.prerequisites = template.prerequisites;
-  } else {
-    newTemplate.prerequisites = randomString(); // setting random string
-  }
-
-  if (template.productIDs !== undefined) {
-    newTemplate.productIDs = template.productIDs;
-  } else {
-    newTemplate.productIDs = randomArray(); // setting random string
-  }
-
-  if (template.roleIDs !== undefined) {
-    newTemplate.roleIDs = template.roleIDs;
-  } else {
-    newTemplate.roleIDs = randomArray(); // setting random string
-  }
-
-  if (template.title !== undefined) {
-    newTemplate.title = template.title;
-  } else {
-    newTemplate.title = randomString(); // setting random string
-  }
-
-  if (template.titleHash !== undefined) {
-    newTemplate.titleHash = template.titleHash;
-  } else {
-    newTemplate.titleHash = uuidv4(); // setting random string
-  }
-
-  console.log(`Migrated template: "${newTemplate}"`);
-  return newTemplate;
 };
 
 const mapDetails = (input) => {

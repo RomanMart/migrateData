@@ -1,0 +1,9 @@
+{
+    "name": "@src-import",
+    "version": "1.0.0",
+    "main": "index.js",
+    "type": "commonjs",
+    "dependencies": {
+        "csv-string": "^4.1.1"
+    }
+}

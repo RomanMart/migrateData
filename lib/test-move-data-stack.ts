@@ -3,6 +3,7 @@ import { Construct } from "constructs";
 import { ApiGatewayConstruct } from "./api-gateway-construct";
 import { DynamodbConstruct } from "./dynamodb-construct";
 import { LambdaConstruct } from "./lambda-construct";
+import { ImportLambdaConstruct } from "./lambda-import-construct";
 import { S3BucketConstruct } from "./s3-bucket-construct";
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
@@ -12,9 +13,16 @@ export class TestMoveDataStack extends cdk.Stack {
 
     const database = new DynamodbConstruct(this, "Database");
 
+    const s3 = new S3BucketConstruct(this, "Bucket");
+
+    new ImportLambdaConstruct(this, "ImportLambdaFunction", {
+      templatesTable: database.templatesTable,
+      s3Bucket: s3.s3Buket
+    })
+
     const lambda = new LambdaConstruct(this, "LambdaFunction", {
       templatesTable: database.templatesTable,
-      newTemplatesTable: database.newTemplatesTable,
+      newTemplatesTable: database.newTemplatesTable
     });
 
     new ApiGatewayConstruct(this, "ApiGateway", {

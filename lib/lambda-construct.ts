@@ -3,6 +3,7 @@ import {NodejsFunction, NodejsFunctionProps} from "aws-cdk-lib/aws-lambda-nodejs
 import {Runtime} from "aws-cdk-lib/aws-lambda";
 import {join} from "path";
 import {ITable} from "aws-cdk-lib/aws-dynamodb";
+import { IBucket } from "aws-cdk-lib/aws-s3";
 
 interface IMicroserviceProps {
     templatesTable: ITable;
@@ -12,11 +13,13 @@ interface IMicroserviceProps {
 export class LambdaConstruct extends Construct {
 
     public readonly templateFunction: NodejsFunction;
+    // public readonly importFunction: NodejsFunction;
 
     constructor(scope: Construct, id: string, props: IMicroserviceProps) {
         super(scope, id);
 
         this.templateFunction = this.createTemplateFunction(props.templatesTable, props.newTemplatesTable);
+        // this.importFunction = this.createImportFunction(props.templatesTable, props.s3Bucket);
 
     }
 
@@ -45,4 +48,31 @@ export class LambdaConstruct extends Construct {
 
         return templatesFunction;
     }
+    // private createImportFunction(templatesTable: ITable, s3Bucket: IBucket): NodejsFunction {
+    //     const nodeJsFunctionProps: NodejsFunctionProps = {
+    //         bundling: {
+    //             externalModules: [
+    //                 'aws-sdk',
+    //                 'csv-parser'
+    //                             ]
+    //         },
+    //         environment: {
+    //             PRIMARY_KEY: 'id',
+    //             TEMPLATES_TABLE_NAME: templatesTable.tableName,
+    //         },
+    //         runtime: Runtime.NODEJS_18_X
+    //     };
+
+    //     const importFunction = new NodejsFunction(this, 'importLambdaFunction', {
+    //         entry: join(__dirname, `/../src/importData/index.js`),
+    //         ...nodeJsFunctionProps
+    //     });
+
+    //     templatesTable.grantReadWriteData(importFunction);
+    //     s3Bucket.grantPut(importFunction);
+    //     s3Bucket.grantReadWrite(importFunction);
+    //     s3Bucket.grantDelete(importFunction);
+
+    //     return importFunction;
+    // }
 }

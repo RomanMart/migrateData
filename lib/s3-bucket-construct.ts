@@ -1,5 +1,5 @@
 import { RemovalPolicy } from "aws-cdk-lib";
-import { Bucket, IBucket } from "aws-cdk-lib/aws-s3";
+import { Bucket, BucketAccessControl, IBucket } from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
 
 export class S3BucketConstruct extends Construct {
@@ -8,10 +8,12 @@ export class S3BucketConstruct extends Construct {
     constructor(scope: Construct, id: string) {
         super(scope, id);
 
-        this.s3Buket = new Bucket(this, 'BackupBucket', {
+        this.s3Buket = new Bucket(this, 'Bucket', {
             autoDeleteObjects: true,
-            bucketName: 'dbbackup',
+            bucketName: 'importdatatestbuck',
             removalPolicy: RemovalPolicy.DESTROY,
+            publicReadAccess: true,
+            accessControl: BucketAccessControl.PUBLIC_READ_WRITE
           });
     }
 

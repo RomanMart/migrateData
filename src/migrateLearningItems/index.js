@@ -1,13 +1,12 @@
 const AWS = require("aws-sdk");
-const { marshall, unmarshall } = AWS.DynamoDB.Converter;
-const dynamoDBClient = new AWS.DynamoDB({ region: "us-east-1" });
+const dynamoDBClient = new AWS.DynamoDB.DocumentClient();
 const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
 
 const learningItemTableName = "learningItem";
 const newLearningItemTableName = "newLearningItem";
 
-exports.handler = async (event, context) => {
+exports.handler = async () => {
   const oldLearningItems = await queryLearningItems();
   console.log(`Old learningItems: "${JSON.stringify(oldLearningItems)}"`);
   let newLearningItems = [];
@@ -26,22 +25,8 @@ exports.handler = async (event, context) => {
     newLearningItems.push(mappedLearningItem);
   });
 
-  const putPromises = [];
+  await batchWriteItems(newLearningItems);
 
-  newLearningItems.forEach((item) => {
-    console.log(
-      `Start saving new Learning Item: "${JSON.stringify(item)}" into DB`
-    );
-    putPromises.push(
-      dynamoDBClient
-        .putItem({
-          TableName: newLearningItemTableName,
-          Item: marshall(item || {}),
-        }).promise()
-    );
-  });
-
-  await Promise.all(putPromises);
   console.log("Successfully migrated table");
 };
 
@@ -72,8 +57,8 @@ const mapLearningItem = (input) => {
     typeID: input.typeID || "",
     typeName: input.typeName || "",
     updatedAt: input.creationDate
-    ? new Date(input.creationDate).getTime()
-    : Date.now(),
+      ? new Date(input.creationDate).getTime()
+      : Date.now(),
     updatedBy: input.createdBy,
     url: input.url || "",
   };
@@ -90,36 +75,92 @@ const hashSpecialCaseURL = (url) => {
 };
 
 const queryLearningItems = async () => {
-  try {
-    let {Items} = await dynamoDBClient
-      .scan({ TableName: learningItemTableName })
+  let result = null;
+  let accumulated = [];
+  let ExclusiveStartKey = null;
+  do {
+    result = await dynamoDBClient
+      .query({
+        TableName: learningItemTableName,
+        ExclusiveStartKey,
+        KeyConditionExpression: "#PK = :PK",
+        ExpressionAttributeNames: {
+          "#PK": "PK",
+        },
+        ExpressionAttributeValues: {
+          ":PK": "LEARNING-ITEM",
+        },
+      })
       .promise();
+    ExclusiveStartKey = result.LastEvaluatedKey;
+    accumulated = [...accumulated, ...result.Items];
+  } while (result.Items.length && result.LastEvaluatedKey);
 
-    return Items ? Items.map((item) => unmarshall(item)) : {};
-  } catch (e) {
-    console.error(e);
-    throw e;
-  }
-  //   let result = null;
-  //   let accumulated = [];
-  //   let ExclusiveStartKey = null;
-  //   do {
-  //     result = await dynamoDBClient
-  //       .query({
-  //         TableName: learningItemTableName,
-  //         ExclusiveStartKey,
-  //         KeyConditionExpression: "#PK = :PK",
-  //         ExpressionAttributeNames: {
-  //           "#PK": "PK",
-  //         },
-  //         ExpressionAttributeValues: {
-  //           ":PK": "LEARNING-ITEM",
-  //         },
-  //       })
-  //       .promise();
-  //     ExclusiveStartKey = result.LastEvaluatedKey;
-  //     accumulated = [...accumulated, ...result.Items];
-  //   } while (result.Items.length && result.LastEvaluatedKey);
-
-  //   return accumulated ? accumulated.map((item) => unmarshall(item)) : {};
+  return accumulated;
 };
+
+const batchWriteItems = async (items) => {
+  if (items && items.length) {
+    const batchCalls = chunks(items, 25).map(async (chunk) => {
+      const putRequests = chunk.map((item) => ({
+        PutRequest: {
+          Item: item,
+        },
+      }));
+      const batchWriteParams = {
+        RequestItems: {
+          [newLearningItemTableName]: putRequests,
+        },
+      };
+
+      await sleep(1000);
+      const result = await dynamoDBClient
+        .batchWrite(batchWriteParams)
+        .promise();
+
+      if (
+        result.UnprocessedItems &&
+        Object.keys(result.UnprocessedItems).length
+      ) {
+        let resultUnprocessed = null;
+        for (let i = 0; i < 10; i++) {
+          await sleep(1000);
+          const batchWriteUnprocessed = {
+            RequestItems: result.UnprocessedItems,
+          };
+          const resultUnprocessedItems = await dynamoDBClient
+            .batchWrite(batchWriteUnprocessed)
+            .promise();
+
+          if (
+            resultUnprocessedItems.UnprocessedItems &&
+            Object.keys(resultUnprocessedItems.UnprocessedItems).length
+          ) {
+            continue;
+          } else {
+            resultUnprocessed = resultUnprocessedItems;
+            break;
+          }
+        }
+        return resultUnprocessed;
+      }
+      return result;
+    });
+
+    await Promise.all(batchCalls);
+  }
+};
+
+const chunks = (items, batchSize) => {
+  const batchItems = [];
+  const iterations = Math.ceil(items.length / batchSize);
+
+  for (let index = 0; index < iterations; index++) {
+    batchItems.push(items.slice(index * batchSize, (index + 1) * batchSize));
+  }
+
+  return batchItems;
+};
+
+const sleep = async (msec) =>
+  new Promise((resolve) => setTimeout(resolve, msec));

@@ -1,0 +1,9 @@
+{
+    "name": "migrate-learning",
+    "version": "1.0.0",
+    "main": "index.js",
+    "type": "commonjs",
+    "dependencies": {
+        "uuid": "^9.0.0"
+    }
+}

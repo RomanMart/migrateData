@@ -1,16 +1,52 @@
-const { PutItemCommand, ScanCommand } =require("@aws-sdk/client-dynamodb");
-const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");
-const { ddbClient } = require("./ddbClient");
-const { v4: uuidv4 } = require("uuid");
-const crypto = require("crypto");
+import { PutItemCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
+import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
+import { ddbClient } from "./ddbClient";
+import { v4 as uuidv4 } from "uuid";
 
-process.env.ITEMS_TABLE_NAME = ""
-process.env.TEMPLATES_TABLE_NAME = "ADD";
-process.env.NEW_TEMPLATES_TABLE_NAME = "ADD";
+exports.handler = async function (event) {
+  console.log("request:", JSON.stringify(event, undefined, 2));
 
-const createHash = (value) => (
-  crypto.createHash('md5').update(value).digest('hex')
-);
+  try {
+    let body;
+    switch (event.httpMethod) {
+      case "GET":
+        if (event.path === "/new-template") {
+          body = await getAllNewTemplates();
+        } else {
+          body = await getAllTemplates();
+        }
+        break;
+      case "POST":
+        if (event.path === "/template/migrate") {
+          body = await migrateToNewTemplates();
+        } else {
+          body = await createTemplate(event);
+        }
+        break;
+      default:
+        throw new Error(`Unsupported route: "${event.httpMethod}"`);
+    }
+
+    console.log(body);
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: `Successfully finished operation: "${event.httpMethod}"`,
+        body: body,
+      }),
+    };
+  } catch (e) {
+    console.error(e);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        message: "Failed to perform operation.",
+        errorMsg: e.message,
+        errorStack: e.stack,
+      }),
+    };
+  }
+};
 
 const getAllTemplates = async () => {
   console.log("getAllTemplates");
@@ -67,12 +103,12 @@ const createTemplate = async (event) => {
   }
 };
 
-const migrateToNewTemplates = async () => {
-  console.log(`migrate function. event`);
+const migrateToNewTemplates = async (event) => {
+  console.log(`migrate function. event : "${event}"`);
   try {
     const oldTemplates = await getAllTemplates();
 
-    // console.log(`Old templates: "${JSON.stringify(oldTemplates)}"`);
+    console.log(`Old templates: "${JSON.stringify(oldTemplates)}"`);
 
     let newTemplates = [];
     oldTemplates.forEach((template) => {
@@ -82,18 +118,19 @@ const migrateToNewTemplates = async () => {
 
         console.log(`Sucessfully mapped DETAILS template. New DETAILS template: "${JSON.stringify(mappedDetails, null, "  ")}"`);
         newTemplates.push(mappedDetails);
-        if (mappedDetails) {
-          console.log(`Start generating metadata object for template with code: "${template.code}}"`);
-          const metadata = generateMetadata(mappedDetails);
-          console.log(`Generated metadata for template with code: "${template.code}}" is: "${JSON.stringify(metadata)}"`);
-          newTemplates.push(metadata);
-      }
       } else if (template.SK.includes("#CONTENT")) {
         console.log(`Start mapping CONTENT template with code "${template.code}"`);
         const mappedContent = mapContent(template);
 
         console.log(`Sucessfully mapped CONTENT template. New CONTENT template: "${JSON.stringify(mappedContent, null, "  ")}"`);
         newTemplates.push(mappedContent);
+
+        if (mappedContent) {
+            console.log(`Start generating metadata object for template with code: "${template.code}}"`);
+            const metadata = generateMetadata(mappedContent);
+            console.log(`Generated metadata for template with code: "${template.code}}" is: "${JSON.stringify(metadata)}"`);
+            newTemplates.push(metadata);
+        }
       } else {
         console.log("SK value does not match expected format");
       }
@@ -131,26 +168,25 @@ const migrateToNewTemplates = async () => {
 const mapDetails = (input) => {
   const output = {
     PK: `TEMPLATE#${input.code}`,
-    SK: "VERSION#V0#DETAILS",
-    accountIDs: input.accountIDs || [],
-    code: input.code || "",
-    customProductIDs: input.productIDs || [],
-    description: input.description || "",
-    empSeniorityID: input.empSeniorityID || "",
-    expectedTime: input.expectedTime || "",
+    SK: "VERSION#DRAFT#DETAILS",
+    accountIDs: input.accountIDs || randomArray(),
+    code: input.code || uuidv4(),
+    customProductIDs: input.productIDs || randomArray(),
+    description: input.description || randomString(),
+    empSeniorityID: input.empSeniorityID || randomString(),
+    expectedTime: input.expectedTime || randomString(),
     itemsCount: 0,
     itemsDuration: input.itemsDuration || 0,
     locationIDs: input.location ? [input.location] : [],
-    org2ID: input.org2ID || "",
-    org3ID: input.org3ID || "",
-    org4ID: input.org4ID || "",
-    org5ID: input.org5ID || "",
+    org2ID: input.org2ID || randomString(),
+    org3ID: input.org3ID || randomString(),
+    org4ID: input.org4ID || randomString(),
+    org5ID: input.org5ID || randomString(),
     prerequisites: input.prerequisites || "",
     productIDs: input.productIDs || [],
     roleIDs: input.roleIDs || [],
     title: input.title || "",
-    titleHash: input.title ? createHash(input.title) : "",
-    updatedAt: input.updatedAt || ""
+    titleHash: uuidv4(),
   };
 
   return output;
@@ -159,7 +195,7 @@ const mapDetails = (input) => {
 const mapContent = (input) => {
   const output = {
     PK: `TEMPLATE#${input.code}`,
-    SK: "VERSION#V0#CONTENT",
+    SK: "VERSION#DRAFT#CONTENT",
     code: input.code,
     content: input.content.map((part) => {
       return {
@@ -180,26 +216,30 @@ const mapContent = (input) => {
 
 const generateMetadata = (result) => {
   const code = result.code;
-  const updatedAt = result.updatedAt;
+
   const output = {
     PK: `TEMPLATE#${code}`,
-    SK: "VERSION#V0#METADATA",
+    SK: "VERSION#DRAFT#METADATA",
     code,
-    createdAt: updatedAt,
-    createdBy: "",
-    createdById: "",
+    createdAt: Date.now(),
+    createdBy: "Roman Martyshchuk",
+    createdById: "115763",
     draftWaiting: false,
     isForceUnlocked: false,
-    lastEditedBy: "",
-    lastEditedById: "",
+    lastEditedBy: "Roman Martyshchuk",
+    lastEditedById: "115763",
     recentUpdatedVersion: true,
-    status: "published",
-    updatedAt: updatedAt
+    status: "draft",
+    updatedAt: Date.now(),
   };
 
   return output;
 };
 
+function randomString() {
+  return (Math.random() + 1).toString(36);
+}
 
-
-(async () => await migrateToNewTemplates())();
+function randomArray() {
+  return Array.from(new Array(3), (val) => uuidv4());
+}

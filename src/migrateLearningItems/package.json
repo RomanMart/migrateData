@@ -4,6 +4,8 @@
     "main": "index.js",
     "type": "commonjs",
     "dependencies": {
+        "aws-sdk": "^2.1333.0",
+        "crypto": "^1.0.1",
         "uuid": "^9.0.0"
     }
 }

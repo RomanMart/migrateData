@@ -1,43 +1,65 @@
 const AWS = require("aws-sdk");
+const dynamoDBClient = new AWS.DynamoDB.DocumentClient();
+const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
 
-const credentials = new AWS.SharedIniFileCredentials({ profile: 'ADD' });
-AWS.config.credentials = credentials;
-AWS.config.update({region: 'eu-west-1'});
-const dynamoDBClient = new AWS.DynamoDB.DocumentClient();
-const learningItemTableName = "ADD";
-const newLearningItemTableName = "ADD";
+const learningItemTableName = "learningItem";
+const newLearningItemTableName = "newLearningItem";
+
+exports.handler = async () => {
+  const oldLearningItems = await queryLearningItems();
+  console.log(`Old learningItems: "${JSON.stringify(oldLearningItems)}"`);
+  let newLearningItems = [];
+
+  oldLearningItems.forEach((learningItem) => {
+    console.log(`Start mapping LEARNING ITEM with code "${learningItem.code}"`);
+    const mappedLearningItem = mapLearningItem(learningItem);
+
+    console.log(
+      `Sucessfully mapped LEARNING ITEM. New LEARNING ITEM: "${JSON.stringify(
+        mappedLearningItem,
+        null,
+        "  "
+      )}"`
+    );
+    newLearningItems.push(mappedLearningItem);
+  });
+
+  await batchWriteItems(newLearningItems);
+
+  console.log("Successfully migrated table");
+};
 
 const mapLearningItem = (input) => {
   const output = {
     PK: "LEARNING-ITEM",
     SK: input.code,
-    accountIDs: input.accountIDs || [],
-    activated: true,
-    code: input.code,
+    accountIDs: input.accountIDs,
+    activated: false,
+    code: input.code || uuidv4(),
     createdAt: input.creationDate
       ? new Date(input.creationDate).getTime()
-      : "",
-    createdBy: input.createdBy || "",
-    creationDate: input.creationDate || "",
-    description: input.description || "",
-    domainID: input.domainID || "",
+      : Date.now(),
+    createdBy: input.createdBy,
+    creationDate: input.creationDate,
+    description: input.description,
+    domainID: input.domainID,
     duration: input.duration || 0,
-    durationType: input.durationType || "",
-    expectedTime: input.expectedTime || "",
+    durationType: input.durationType,
+    expectedTime: input.expectedTime,
     location: input.location || "",
-    productIDs: input.productIDs || [],
-    resourceURL: input.resourceURL ? input.resourceURL : input.url ? createHash(input.url) : "",
+    productIDs: input.productIDs,
+    resourceURL: input.resourceURL ? input.resourceURL : createHash(input.url),
     roleIDs: input.roleIDs || [],
-    specialCaseURL: input.url ? hashSpecialCaseURL(input.url) : "",
+    specialCaseURL: hashSpecialCaseURL(input.url),
     technology: input.technology || "",
     title: input.title || "",
     typeID: input.typeID || "",
     typeName: input.typeName || "",
-    updatedAt: input.creationDate || ""
+    updatedAt: input.creationDate
       ? new Date(input.creationDate).getTime()
-      : "",
-    updatedBy: input.createdBy || "",
+      : Date.now(),
+    updatedBy: input.createdBy,
     url: input.url || "",
   };
 
@@ -142,28 +164,3 @@ const chunks = (items, batchSize) => {
 
 const sleep = async (msec) =>
   new Promise((resolve) => setTimeout(resolve, msec));
-
-
-  (async () => {
-    const oldLearningItems = await queryLearningItems();
-    // console.log(`Old learningItems: "${JSON.stringify(oldLearningItems)}"`);
-    let newLearningItems = [];
-  
-    oldLearningItems.forEach((learningItem) => {
-      console.log(`Start mapping LEARNING ITEM with code "${learningItem.code}"`);
-      const mappedLearningItem = mapLearningItem(learningItem);
-  
-      // console.log(
-      //   `Sucessfully mapped LEARNING ITEM. New LEARNING ITEM: "${JSON.stringify(
-      //     mappedLearningItem,
-      //     null,
-      //     "  "
-      //   )}"`
-      // );
-      newLearningItems.push(mappedLearningItem);
-    });
-  
-    await batchWriteItems(newLearningItems);
-  
-    console.log("Successfully migrated table");
-  })();

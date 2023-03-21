@@ -1,7 +1,7 @@
 const AWS = require("aws-sdk");
 const crypto = require("crypto");
 
-const credentials = new AWS.SharedIniFileCredentials({ profile: 'ADD' });
+const credentials = new AWS.SharedIniFileCredentials({ profile: 'amdocs-learn-prod-eu-west-1' });
 AWS.config.credentials = credentials;
 AWS.config.update({region: 'eu-west-1'});
 const dynamoDBClient = new AWS.DynamoDB.DocumentClient();

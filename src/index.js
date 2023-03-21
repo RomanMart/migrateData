@@ -129,6 +129,8 @@ const migrateToNewTemplates = async () => {
 };
 
 const mapDetails = (input) => {
+  const dateNow = new Date().getTime();
+  const updatedAt = input.updatedAt ? marshall(Number(input.updatedAt)) : marshall(dateNow);
   const output = {
     PK: `TEMPLATE#${input.code}`,
     SK: "VERSION#V0#DETAILS",
@@ -150,7 +152,7 @@ const mapDetails = (input) => {
     roleIDs: input.roleIDs || [],
     title: input.title || "",
     titleHash: input.title ? createHash(input.title) : "",
-    updatedAt: input.updatedAt || ""
+    updatedAt
   };
 
   return output;
@@ -194,12 +196,10 @@ const generateMetadata = (result) => {
     lastEditedById: "",
     recentUpdatedVersion: true,
     status: "published",
-    updatedAt: updatedAt
+    updatedAt
   };
 
   return output;
 };
-
-
 
 (async () => await migrateToNewTemplates())();

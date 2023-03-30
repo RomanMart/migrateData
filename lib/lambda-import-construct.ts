@@ -6,17 +6,19 @@ import path = require("path");
 
 interface ILambdaProps {
     templatesTable: ITable;
+    newTemplatesTable: ITable;
+    newLearningItemsTable: ITable;
     s3Bucket: IBucket
 }
 export class ImportLambdaConstruct extends Construct {
     public readonly importFunction: Function
     constructor(scope: Construct, id: string, props: ILambdaProps) {
         super(scope, id);
-        this.importFunction = this.createImportFunction(props.templatesTable, props.s3Bucket);
+        this.importFunction = this.createImportFunction(props.templatesTable, props.newTemplatesTable, props.newLearningItemsTable, props.s3Bucket);
 
     }
 
-    private createImportFunction(templatesTable: ITable, s3Bucket: IBucket): Function {
+    private createImportFunction(templatesTable: ITable, newTemplatesTable: ITable, newLearningItemsTable: ITable, s3Bucket: IBucket): Function {
         const functionProps: FunctionProps = {
             runtime: Runtime.NODEJS_14_X,
             handler: 'index.handler',
@@ -28,6 +30,8 @@ export class ImportLambdaConstruct extends Construct {
         });
 
         templatesTable.grantReadWriteData(importFunction);
+        newTemplatesTable.grantReadWriteData(importFunction);
+        newLearningItemsTable.grantReadWriteData(importFunction);
         s3Bucket.grantPut(importFunction);
         s3Bucket.grantReadWrite(importFunction);
         s3Bucket.grantDelete(importFunction);

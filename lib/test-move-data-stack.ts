@@ -5,6 +5,7 @@ import { DynamodbConstruct } from "./dynamodb-construct";
 import { LambdaConstruct } from "./lambda-construct";
 import { ImportLambdaConstruct } from "./lambda-import-construct";
 import { MigrateLearningItemsConstruct } from "./lambda-migrateLearnItem-construct";
+import { UpdateFieldsItemsConstruct } from "./lambda-updateFields-construct";
 import { S3BucketConstruct } from "./s3-bucket-construct";
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
@@ -18,6 +19,8 @@ export class TestMoveDataStack extends cdk.Stack {
 
     new ImportLambdaConstruct(this, "ImportLambdaFunction", {
       templatesTable: database.templatesTable,
+      newTemplatesTable: database.newTemplatesTable,
+      newLearningItemsTable: database.newLearningItemsTable,
       s3Bucket: s3.s3Buket
     })
 
@@ -29,6 +32,12 @@ export class TestMoveDataStack extends cdk.Stack {
     const learningItems = new MigrateLearningItemsConstruct(this, "LearningItemsFunction", {
       learningItemTable: database.learningItemsTable,
       newlearningItemTable: database.newLearningItemsTable
+    });
+
+    new UpdateFieldsItemsConstruct(this, "UpdateFieldsFunction", {
+      learningItemTable: database.newLearningItemsTable,
+      newTemplatesTable: database.newTemplatesTable,
+      s3Bucket: s3.s3Buket
     })
 
     new ApiGatewayConstruct(this, "ApiGateway", {

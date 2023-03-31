@@ -1,13 +1,13 @@
 const AWS = require("aws-sdk");
 const s3 = new AWS.S3({ region: "us-east-1", apiVersion: "2006-03-01" });
 const CSV = require("csv-string");
-const dynamoDBTable = "template";
+const dynamoDBTable = "newTemplate";
 
 const dynamodb = new AWS.DynamoDB({ region: "us-east-1" });
 
 exports.handler = async (event, context) => {
   const bucket = "importdatatestbuck";
-  const key = "test.csv";
+  const key = "templates_new.csv";
   const params = {
     Bucket: bucket,
     Key: key,
@@ -42,6 +42,8 @@ exports.handler = async (event, context) => {
         // Parse the value as JSON if it's an array
         if (value.startsWith("[") && value.endsWith("]")) {
           item[header] = {"L": JSON.parse(value)};
+        } else if (header === "createdAt" || header === "updatedAt") {
+          item[header] = {"N": value}
         } else {
           item[header] = {"S": value};
         }

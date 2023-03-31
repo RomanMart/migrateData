@@ -1,16 +1,20 @@
 const { PutItemCommand, ScanCommand } =require("@aws-sdk/client-dynamodb");
+const Promise = require('bluebird');
 const { marshall, unmarshall } = require("@aws-sdk/util-dynamodb");
 const { ddbClient } = require("./ddbClient");
 const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
 
 process.env.ITEMS_TABLE_NAME = ""
-process.env.TEMPLATES_TABLE_NAME = "ADD";
-process.env.NEW_TEMPLATES_TABLE_NAME = "ADD";
+process.env.TEMPLATES_TABLE_NAME = "LearningPlatform-Data-PROD-TemplateDD17C772-6042T8TS4MFN";
+process.env.NEW_TEMPLATES_TABLE_NAME = "AmdocsU-Data-PROD-TemplateDD17C772-LL134JHFOVSF";
 
 const createHash = (value) => (
   crypto.createHash('md5').update(value).digest('hex')
 );
+
+const sleep = async (msec) =>
+  new Promise((resolve) => setTimeout(resolve, msec));
 
 const getAllTemplates = async () => {
   console.log("getAllTemplates");
@@ -21,7 +25,7 @@ const getAllTemplates = async () => {
 
     const { Items } = await ddbClient.send(new ScanCommand(params));
 
-    console.log(Items);
+    // console.log(Items);
     return Items ? Items.map((item) => unmarshall(item)) : {};
   } catch (e) {
     console.error(e);
@@ -108,6 +112,7 @@ const migrateToNewTemplates = async () => {
     );
 
     const putPromises = [];
+    console.log({length: newTemplates.length})
     newTemplates.forEach((item) => {
       console.log(`Start saving newTemplate: "${JSON.stringify(item)}" into DB`);
       putPromises.push(
@@ -119,8 +124,9 @@ const migrateToNewTemplates = async () => {
         )
       );
     });
-
-    await Promise.all(putPromises);
+    await Promise.each(putPromises, (result) => {
+      console.log(result, "all good");
+    });
     console.log("Successfully migrated table");
   } catch (e) {
     console.error(e);
@@ -130,7 +136,7 @@ const migrateToNewTemplates = async () => {
 
 const mapDetails = (input) => {
   const dateNow = new Date().getTime();
-  const updatedAt = input.updatedAt ? marshall(Number(input.updatedAt)) : marshall(dateNow);
+  const updatedAt = input.updatedAt ? Number(input.updatedAt) : dateNow;
   const output = {
     PK: `TEMPLATE#${input.code}`,
     SK: "VERSION#V0#DETAILS",

@@ -5,8 +5,8 @@ const credentials = new AWS.SharedIniFileCredentials({ profile: 'amdocs-learn-pr
 AWS.config.credentials = credentials;
 AWS.config.update({region: 'eu-west-1'});
 const dynamoDBClient = new AWS.DynamoDB.DocumentClient();
-const learningItemTableName = "ADD";
-const newLearningItemTableName = "ADD";
+const learningItemTableName = "LearningPlatform-Data-PROD-Item741EE4EA-A9PH97CU62KL";
+const newLearningItemTableName = "AmdocsU-Data-PROD-Item741EE4EA-HBLNI3TC1K26";
 
 const mapLearningItem = (input) => {
   const output = {
@@ -27,9 +27,9 @@ const mapLearningItem = (input) => {
     expectedTime: input.expectedTime || "",
     location: input.location || "",
     productIDs: input.productIDs || [],
-    resourceURL: input.resourceURL ? input.resourceURL : input.url ? createHash(input.url) : "",
+    resourceURL: input.resourceURL ? input.resourceURL : input.url ? createHash(input.url) : "Empty",
     roleIDs: input.roleIDs || [],
-    specialCaseURL: input.url ? hashSpecialCaseURL(input.url) : "",
+    specialCaseURL: input.url ? hashSpecialCaseURL(input.url) : "Empty",
     technology: input.technology || "",
     title: input.title || "",
     typeID: input.typeID || "",
@@ -91,7 +91,7 @@ const batchWriteItems = async (items) => {
         },
       };
 
-      await sleep(1000);
+      await sleep(3000);
       const result = await dynamoDBClient
         .batchWrite(batchWriteParams)
         .promise();
@@ -102,7 +102,7 @@ const batchWriteItems = async (items) => {
       ) {
         let resultUnprocessed = null;
         for (let i = 0; i < 10; i++) {
-          await sleep(1000);
+          await sleep(3000);
           const batchWriteUnprocessed = {
             RequestItems: result.UnprocessedItems,
           };

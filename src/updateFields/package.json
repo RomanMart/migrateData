@@ -4,6 +4,7 @@
     "main": "index.js",
     "type": "commonjs",
     "dependencies": {
+        "aws-sdk": "^2.1348.0",
         "xlsx": "^0.18.5"
     }
 }

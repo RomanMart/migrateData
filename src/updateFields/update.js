@@ -79,7 +79,10 @@ const updateTemplateFields = (template, excelRow) => {
 
   updatedTemplate.createdAt = createdAtTimestamp;
   updatedTemplate.updatedAt = createdAtTimestamp;
-
+  delete updatedTemplate.updatedBy;  
+  delete updatedTemplate.updatedById;  
+  delete updatedTemplate.customProductIDs;  
+  delete updatedTemplate.productIDs;  
   return {
     ...updatedTemplate,
     createdBy: createdBy,
@@ -87,8 +90,9 @@ const updateTemplateFields = (template, excelRow) => {
     publishedAt: createdAtTimestamp,
     publishedBy: createdBy,
     publishedById: createdByID,
-    updatedBy: createdBy,
-    updatedById: createdByID,
+    lastEditedBy: createdBy,
+    lastEditedById: createdByID,
+    latest: "V1",
   };
 };
 
@@ -160,10 +164,10 @@ const updateLearningItemFields = (learningItem, excelRow) => {
 
   return {
     ...updatedLearningItem,
-    createdBy: createdBy,
-    createdById: createdByID,
-    updatedBy: createdBy,
-    updatedById: createdByID,
+    createdBy: createdByID,
+    createdByUser: createdBy,
+    updatedByUser: createdBy,
+    updatedBy: createdByID,
   };
 };
 

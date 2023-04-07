@@ -5,8 +5,8 @@ AWS.config.credentials = credentials;
 AWS.config.update({
   region: 'eu-west-1',
 });
-const { updateTemplates, updateLearningItems } = require('./update');
+const { updateTemplates, updateLearningItems, addV1Templates } = require('./update');
 
-
-  (async () => await updateTemplates())();
+  // (async () => await updateTemplates())();
   //(async () => await updateLearningItems())();
+  (async () => await addV1Templates())();

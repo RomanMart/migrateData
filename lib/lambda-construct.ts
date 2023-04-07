@@ -39,7 +39,7 @@ export class LambdaConstruct extends Construct {
         };
 
         const templatesFunction = new NodejsFunction(this, 'templateLambdaFunction', {
-            entry: join(__dirname, `/../src/index.js`),
+            entry: join(__dirname, `/../src/handler.js`),
             ...nodeJsFunctionProps
         });
 

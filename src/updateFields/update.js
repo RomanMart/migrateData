@@ -6,17 +6,23 @@ const {
   batchWriteTemplates,
   getLearningItems,
   batchWriteLearningItems,
+  getTemplatesByCode,
 } = require("./dao");
 
 const S3Bucket = "importdatatestbuck";
+
+const templatesFileName =
+  "templateDetailsReportsMar26th2023 with name and emp numbers.xlsx";
 const templatesSheetName = "templateDetailsReportsMar26th20";
+
+const itemsFileName =
+  "Copy of learningItemReports Mar27th23 with names and emp numbers and creation date.xlsx";
 const itemsSheetName = "Item Create dates";
 
 const updateTemplates = async () => {
-  const key = "templateDetailsReportsMar26th2023 with name and emp numbers.xlsx";
   const params = {
     Bucket: S3Bucket,
-    Key: key,
+    Key: templatesFileName,
   };
 
   try {
@@ -79,10 +85,10 @@ const updateTemplateFields = (template, excelRow) => {
 
   updatedTemplate.createdAt = createdAtTimestamp;
   updatedTemplate.updatedAt = createdAtTimestamp;
-  delete updatedTemplate.updatedBy;  
-  delete updatedTemplate.updatedById;  
-  delete updatedTemplate.customProductIDs;  
-  delete updatedTemplate.productIDs;  
+  delete updatedTemplate.updatedBy;
+  delete updatedTemplate.updatedById;
+  delete updatedTemplate.customProductIDs;
+  delete updatedTemplate.productIDs;
   return {
     ...updatedTemplate,
     createdBy: createdBy,
@@ -97,11 +103,9 @@ const updateTemplateFields = (template, excelRow) => {
 };
 
 const updateLearningItems = async () => {
-  const key =
-    "Copy of learningItemReports Mar27th23 with names and emp numbers and creation date.xlsx";
   const params = {
     Bucket: S3Bucket,
-    Key: key,
+    Key: itemsFileName,
   };
 
   try {
@@ -171,7 +175,101 @@ const updateLearningItemFields = (learningItem, excelRow) => {
   };
 };
 
+const addV1Templates = async () => {
+  const contentSKV1 = "VERSION#V1#CONTENT";
+  const detailsSKV1 = "VERSION#V1#DETAILS";
+  const metadataSKV1 = "VERSION#V1#METADATA";
+
+  const params = {
+    Bucket: S3Bucket,
+    Key: templatesFileName,
+  };
+
+  try {
+    const updatedTemplates = [];
+
+    const { Body } = await s3.getObject(params).promise();
+    const workbook = XLSX.read(Body, { cellDates: true });
+    const worksheet = workbook.Sheets[templatesSheetName];
+    const excelData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    const promises = excelData.map(async (row) => {
+      const code = row[4];
+      const { Items } = await getTemplatesByCode(code);
+
+      if (Items.length) {
+        const { content, details, metadata } =
+          sanitizeTemplateQueryResult(Items);
+
+        if (content) {
+          content.SK = contentSKV1;
+          updatedTemplates.push(content);
+        }
+
+        if (details) {
+          details.SK = detailsSKV1;
+          updatedTemplates.push(details);
+        }
+
+        if (metadata) {
+          const newMetadata = {
+            PK: metadata.PK,
+            SK: metadataSKV1,
+            code: metadata.code,
+            publishedBy: metadata.publishedBy,
+            publishedById: metadata.publishedById,
+            updatedAt: metadata.updatedAt,
+          };
+
+          updatedTemplates.push(newMetadata);
+        }
+      }
+    });
+
+    await Promise.all(promises);
+
+    console.log(
+      `Sucessfully mapped TEMPLATES. New TEMPLATES: "${JSON.stringify(
+        updatedTemplates,
+        null,
+        "  "
+      )}"`
+    );
+
+    await batchWriteTemplates(updatedTemplates);
+  } catch (err) {
+    console.log(err);
+    throw err;
+  }
+};
+
+const sanitizeTemplateQueryResult = (items) => {
+  const typeToSK = {
+    content: "VERSION#V0#CONTENT",
+    details: "VERSION#V0#DETAILS",
+    metadata: "VERSION#V0#METADATA",
+  };
+
+  const result = {};
+
+  items.forEach((item) => {
+    const type = Object.keys(typeToSK).find((key) =>
+      item.SK.includes(typeToSK[key])
+    );
+
+    if (!type) {
+      console.warn(`UNSUPPORTED TEMPLATE FORMAT: ${JSON.stringify(item)}`);
+      return;
+    }
+
+    result[type] = item;
+  });
+
+  return result;
+};
+
 module.exports = {
   updateTemplates,
   updateLearningItems,
+  addV1Templates,
 };

@@ -33,6 +33,21 @@ const getLearningItems = async (key) => {
     .promise();
 };
 
+const getTemplatesByCode = async (code) => {
+  return await documentClient
+    .query({
+      TableName: TEMPLATE_TABLE_NAME,
+      KeyConditionExpression: "#PK = :PK",
+      ExpressionAttributeNames: {
+        "#PK": "PK",
+      },
+      ExpressionAttributeValues: {
+        ":PK": `TEMPLATE#${code}`,
+      },
+    })
+    .promise();
+};
+
 const batchWriteTemplates = async (items) => {
   await batchWriteItems(items, TEMPLATE_TABLE_NAME);
 };
@@ -111,4 +126,5 @@ module.exports = {
   getTemplates,
   batchWriteTemplates,
   batchWriteLearningItems,
+  getTemplatesByCode,
 };
